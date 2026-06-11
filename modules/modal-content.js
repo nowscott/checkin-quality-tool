@@ -1,5 +1,13 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v1.3.3",
+    date: "2026-06-11",
+    items: [
+      "内置白名单 CSV 和导出 Sheet 删除教师邮箱、教师姓名两列。",
+      "白名单统一优先按学员号关联，缺少学员号时按清洗后的学员姓名关联。",
+    ],
+  },
+  {
     version: "v1.3.2",
     date: "2026-06-11",
     items: [

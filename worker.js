@@ -426,8 +426,7 @@ function buildOutput(listInfo, chatInfo, matchInfo, whitelist, useSingle, weekLa
       rows: whitelist.entries,
       columns: WHITELIST_COLUMNS,
       widths: {
-        学员号: 18, 教师邮箱: 28, 教师姓名: 16, 学员姓名: 18, 匹配学员姓名: 18,
-        处理方式: 12, 匹配别名: 24, 说明: 60,
+        学员号: 18, 学员姓名: 18, 匹配学员姓名: 18, 处理方式: 12, 匹配别名: 24, 说明: 60,
       },
     },
   ];
