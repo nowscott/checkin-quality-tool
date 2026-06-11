@@ -15,7 +15,7 @@
       <div class="brand-line">
         <img class="brand-icon" src="/assets/checkin-icon.png" alt="" width="42" height="42">
         <p class="eyebrow">LOCAL QUALITY CHECK</p>
-        <button class="version-button" id="version-button" type="button">v1.1.0</button>
+        <button class="version-button" id="version-button" type="button">v1.2.0</button>
       </div>
       <h1>打卡质检数据生成</h1>
       <p class="subtitle">上传课堂反馈名单与聊天导出数据，在浏览器本地完成清洗、匹配并生成可追溯的多 Sheet Excel。文件不会上传服务器。</p>
@@ -104,7 +104,7 @@
       <article><span>Sheet 2</span><strong>匹配明细</strong><p>记录命中关键词、位置、群名、聊天时间、内容和源行号。</p></article>
       <article><span>Sheet 3</span><strong>清洗后聊天</strong><p>仅保留后续匹配所需字段，移除无关列和无效记录。</p></article>
       <article><span>Sheet 4</span><strong>处理说明</strong><p>记录清洗规则、去重规则、各阶段数量和生成时间。</p></article>
-      <article><span>Sheet 5</span><strong>内置白名单</strong><p>展示本次处理使用的学员号哈希、教师和豁免说明。</p></article>
+      <article><span>Sheet 5</span><strong>内置白名单</strong><p>展示本次处理使用的学员号、别名和豁免说明。</p></article>
     </section>
   </main>
 
@@ -117,13 +117,22 @@
       <button class="dialog-close" id="changelog-close" type="button" aria-label="关闭">×</button>
     </div>
     <section>
+      <strong>v1.2.0</strong>
+      <time datetime="2026-06-11">2026-06-11</time>
+      <ul>
+        <li>白名单区分彻底免检和学员别名，别名仍需真实聊天命中。</li>
+        <li>从历史白名单整理8条长期别名关系并关联学员号。</li>
+        <li>Worker拆分为白名单、匹配和流程模块，降低后续维护成本。</li>
+      </ul>
+    </section>
+    <section>
       <strong>v1.1.0</strong>
       <time datetime="2026-06-11">2026-06-11</time>
       <ul>
         <li>教师统一通过邮箱匹配，不受姓名数字后缀或企微昵称影响。</li>
         <li>英文姓名及英文聊天内容匹配忽略大小写。</li>
         <li>四字中文姓名末尾“一”自动清理，单字姓名自动使用弱匹配。</li>
-        <li>新增项目内置 CSV 白名单和白名单审计 Sheet。</li>
+        <li>新增项目内置 CSV 白名单，区分彻底免检与学员别名。</li>
         <li>打卡结果删除 B、C 空白列，核心字段连续排列。</li>
       </ul>
     </section>
