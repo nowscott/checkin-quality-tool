@@ -1,0 +1,96 @@
+const form = document.querySelector("#process-form");
+const listFile = document.querySelector("#list-file");
+const chatFile = document.querySelector("#chat-file");
+const listName = document.querySelector("#list-name");
+const chatName = document.querySelector("#chat-name");
+const button = document.querySelector("#submit-button");
+const statusCard = document.querySelector("#status-card");
+const statusTitle = document.querySelector("#status-title");
+const statusText = document.querySelector("#status-text");
+const spinner = document.querySelector("#spinner");
+const progressBar = document.querySelector("#progress-bar");
+
+let worker;
+
+function bindFileName(input, output) {
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    output.textContent = file ? `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)} MB` : "选择 Excel 文件";
+  });
+}
+
+function setStatus(title, message, progress = 0, mode = "working") {
+  statusCard.hidden = false;
+  statusTitle.textContent = title;
+  statusText.textContent = message;
+  progressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+  spinner.className = mode === "done" ? "spinner done" : mode === "error" ? "spinner error" : "spinner";
+}
+
+function downloadResult(buffer, filename) {
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+bindFileName(listFile, listName);
+bindFileName(chatFile, chatName);
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!listFile.files[0] || !chatFile.files[0]) return;
+
+  worker?.terminate();
+  worker = new Worker("./worker.js");
+  button.disabled = true;
+  setStatus("正在启动本地处理引擎", "所有文件只在当前浏览器中处理，不会上传。", 2);
+
+  worker.onmessage = ({ data }) => {
+    if (data.type === "progress") {
+      setStatus(data.title, data.message, data.progress);
+      return;
+    }
+    if (data.type === "complete") {
+      downloadResult(data.buffer, data.filename);
+      setStatus(
+        "处理完成，结果已下载",
+        `质检 ${data.summary.targets.toLocaleString()} 人：已发送 ${data.summary.sent.toLocaleString()}，未发送 ${data.summary.unsent.toLocaleString()}；清洗后聊天 ${data.summary.cleanChats.toLocaleString()} 条。`,
+        100,
+        "done",
+      );
+      button.disabled = false;
+      worker.terminate();
+      worker = null;
+      return;
+    }
+    if (data.type === "error") {
+      setStatus("处理失败", data.message, 100, "error");
+      button.disabled = false;
+      worker.terminate();
+      worker = null;
+    }
+  };
+
+  worker.onerror = (event) => {
+    setStatus("处理失败", event.message || "浏览器工作线程发生错误。", 100, "error");
+    button.disabled = false;
+    worker?.terminate();
+    worker = null;
+  };
+
+  worker.postMessage({
+    type: "process",
+    listFile: listFile.files[0],
+    chatFile: chatFile.files[0],
+    weekLabel: document.querySelector("#week-label").value.trim(),
+    useSingle: document.querySelector("#use-single").checked,
+  });
+});
