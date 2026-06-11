@@ -1,3 +1,10 @@
+function listTeacherNameWithEmailSuffix(listTeacherName, listTeacherEmail) {
+  const localPart = String(listTeacherEmail || "").split("@")[0];
+  const emailDigits = localPart.match(/(\d+)$/)?.[1] || "";
+  if (!emailDigits) return listTeacherName;
+  return `${String(listTeacherName || "").replace(/[0-9０-９]+$/u, "")}${emailDigits}`;
+}
+
 async function matchData(targets, chats, useSingle, weekLabel, whitelist) {
   const chatsByEmail = new Map();
   chats.forEach((chat) => {
@@ -74,7 +81,7 @@ async function matchData(targets, chats, useSingle, weekLabel, whitelist) {
     const id = targetIndex + 1;
     finalRows.push({
       序号: id,
-      教师姓名: target.教师姓名,
+      教师姓名: listTeacherNameWithEmailSuffix(target.教师姓名, target.教师邮箱),
       教师邮箱: target.教师邮箱,
       学生姓名: target.原始学员姓名,
       匹配学员姓名: target.学员姓名,
