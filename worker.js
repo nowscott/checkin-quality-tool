@@ -5,12 +5,17 @@ const QUOTE_SEPARATOR = /(?:-\s*){8,}|[—－-]{12,}/;
 const QUOTE_PREFIX = /^\s*[「『][\s\S]{0,500}?[：:]/;
 
 const FINAL_COLUMNS = [
-  "序号", "教师姓名", "教师邮箱", "学员姓名", "上课日期", "上课时间", "该周课次数",
-  "服务周", "发送情况", "匹配结论", "命中关键词", "命中位置", "命中群名",
+  "教师姓名",
+  { key: "空白列B", header: "" },
+  { key: "空白列C", header: "" },
+  "上课日期", "上课时间", "学生姓名", "服务周", "发送情况",
+  "序号", "教师邮箱", "匹配学员姓名", "姓名清洗说明", "该周课次数",
+  "匹配结论", "命中关键词", "命中位置", "命中群名",
   "命中聊天时间", "匹配消息数", "校区", "项目组", "科目", "源名单行号",
 ];
 const DETAIL_COLUMNS = [
-  "质检序号", "教师姓名", "教师邮箱", "学员姓名", "学员关键词_后两字", "学员关键词_末字",
+  "质检序号", "教师姓名", "教师邮箱", "原始学员姓名", "匹配学员姓名", "姓名清洗说明",
+  "学员关键词_后两字", "学员关键词_末字",
   "匹配序号", "匹配强度", "命中位置", "命中关键词", "发送人名称", "有效教师邮箱",
   "邮箱来源", "群名/好友昵称", "聊天时间", "聊天内容", "源聊天行号",
 ];
@@ -33,7 +38,32 @@ function emailValue(value) {
 }
 
 function cleanStudentName(value) {
-  return text(value).replace(/\s+/g, "").replace(/(学员|同学|学生)$/u, "");
+  const original = text(value);
+  let cleaned = original.replace(/\s+/g, "");
+  const suffixRules = [
+    /[（(【\[].+?[）)】\]]$/u,
+    /[0-9０-９]+$/u,
+    /重复$/u,
+    /(?:学员|同学|学生)$/u,
+    /(?:家长|妈妈|爸爸|姐姐|哥哥|妹妹|弟弟)$/u,
+    /(?:初|高)(?:[一二三]|[1-3１-３])(?:年级)?$/u,
+  ];
+  let changed = true;
+  while (cleaned && changed) {
+    changed = false;
+    for (const suffix of suffixRules) {
+      const next = cleaned.replace(suffix, "");
+      if (next !== cleaned) {
+        cleaned = next;
+        changed = true;
+      }
+    }
+  }
+  return {
+    original,
+    cleaned,
+    note: original.replace(/\s+/g, "") === cleaned ? "" : `${original} → ${cleaned || "空"}`,
+  };
 }
 
 function excelDate(value) {
@@ -134,25 +164,36 @@ function buildTargets(workbook) {
   };
   const grouped = new Map();
   const weekCounts = new Map();
-  const counts = { 原始课次行数: Math.max(0, rows.length - 1), 跳过教师或学员为空: 0, 名单教师邮箱为空: 0 };
+  const counts = {
+    原始课次行数: Math.max(0, rows.length - 1),
+    跳过教师或学员为空: 0,
+    名单教师邮箱为空: 0,
+    姓名已清洗课次: 0,
+    姓名不足两字课次: 0,
+  };
 
   for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex];
     const teacher = text(row[columns.teacher]);
-    const student = cleanStudentName(row[columns.student]);
+    const studentName = cleanStudentName(row[columns.student]);
+    const student = studentName.cleaned;
     const teacherEmail = emailValue(row[columns.email]);
-    if (!teacher || !student) {
+    if (!teacher || !studentName.original) {
       counts.跳过教师或学员为空 += 1;
       continue;
     }
+    if (studentName.note) counts.姓名已清洗课次 += 1;
+    if ([...student].length < 2) counts.姓名不足两字课次 += 1;
     if (!teacherEmail) counts.名单教师邮箱为空 += 1;
     const lessonWeek = weekOfMonth(row[columns.lessonDate]);
     if (lessonWeek) weekCounts.set(lessonWeek, (weekCounts.get(lessonWeek) || 0) + 1);
-    const key = `${teacherEmail || `__name__:${teacher}`}\u0000${student}`;
+    const key = `${teacherEmail || `__name__:${teacher}`}\u0000${student || `__raw__:${studentName.original}`}`;
     const record = {
       教师姓名: teacher,
       教师邮箱: teacherEmail,
       学员姓名: student,
+      原始学员姓名: studentName.original,
+      姓名清洗说明: studentName.note,
       学员号: text(row[columns.studentId]),
       上课日期: row[columns.lessonDate],
       上课开始: text(row[columns.start]),
@@ -256,11 +297,12 @@ function matchData(targets, chats, useSingle, weekLabel) {
 
   const finalRows = [];
   const detailRows = [];
-  const counts = { 已发送: 0, 未发送: 0, 强匹配: 0, 弱匹配: 0, 无匹配: 0 };
+  const counts = { 已发送: 0, 未发送: 0, 人工复核: 0, 强匹配: 0, 弱匹配: 0, 无匹配: 0 };
 
   targets.forEach((target, targetIndex) => {
-    const strong = target.学员姓名.slice(-2);
-    const weak = useSingle ? target.学员姓名.slice(-1) : "";
+    const requiresReview = [...target.学员姓名].length < 2;
+    const strong = requiresReview ? "" : target.学员姓名.slice(-2);
+    const weak = !requiresReview && useSingle ? target.学员姓名.slice(-1) : "";
     const candidates = chatsByEmail.get(target.教师邮箱) || [];
     const matches = [];
     for (const chat of candidates) {
@@ -292,20 +334,25 @@ function matchData(targets, chats, useSingle, weekLabel) {
     );
     const best = matches[0];
     const sent = Boolean(best);
-    const conclusion = best?.匹配强度 || "无匹配";
-    counts[sent ? "已发送" : "未发送"] += 1;
-    counts[conclusion] += 1;
+    const status = requiresReview ? "人工复核" : sent ? "已发送" : "未发送";
+    const conclusion = requiresReview ? "姓名不足两字，需人工复核" : best?.匹配强度 || "无匹配";
+    counts[status] += 1;
+    if (Object.hasOwn(counts, conclusion)) counts[conclusion] += 1;
     const id = targetIndex + 1;
     finalRows.push({
       序号: id,
       教师姓名: target.教师姓名,
+      空白列B: "",
+      空白列C: "",
       教师邮箱: target.教师邮箱,
-      学员姓名: target.学员姓名,
+      学生姓名: target.原始学员姓名,
+      匹配学员姓名: target.学员姓名,
+      姓名清洗说明: target.姓名清洗说明,
       上课日期: excelDate(target.上课日期),
       上课时间: [target.上课开始, target.上课结束].filter(Boolean).join("-"),
       该周课次数: target.该周课次数,
       服务周: weekLabel,
-      发送情况: sent ? "已发送" : "未发送",
+      发送情况: status,
       匹配结论: conclusion,
       命中关键词: best?.命中关键词 || "",
       命中位置: best?.命中位置 || "",
@@ -321,7 +368,9 @@ function matchData(targets, chats, useSingle, weekLabel) {
       质检序号: id,
       教师姓名: target.教师姓名,
       教师邮箱: target.教师邮箱,
-      学员姓名: target.学员姓名,
+      原始学员姓名: target.原始学员姓名,
+      匹配学员姓名: target.学员姓名,
+      姓名清洗说明: target.姓名清洗说明,
       学员关键词_后两字: strong,
       学员关键词_末字: weak,
       匹配序号: matchIndex + 1,
@@ -375,9 +424,13 @@ function addZipTextFile(zip, filename, chunks) {
 }
 
 function* worksheetChunks(rows, columns, widths, rowStyle) {
+  const columnKey = (column) => typeof column === "string" ? column : column.key;
+  const columnHeader = (column) => typeof column === "string" ? column : column.header;
   const lastCell = `${excelColumn(columns.length - 1)}${rows.length + 1}`;
   const colsXml = columns.map((column, index) => {
-    const width = widths[column] || Math.min(Math.max(column.length * 2 + 2, 12), 24);
+    const key = columnKey(column);
+    const header = columnHeader(column);
+    const width = widths[key] || Math.min(Math.max(header.length * 2 + 2, 12), 24);
     return `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`;
   }).join("");
   yield (
@@ -386,7 +439,7 @@ function* worksheetChunks(rows, columns, widths, rowStyle) {
     `<dimension ref="A1:${lastCell}"/><sheetViews><sheetView workbookViewId="0">` +
     `<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>` +
     `</sheetView></sheetViews><cols>${colsXml}</cols><sheetData>` +
-    `<row r="1">${columns.map((column, index) => cellXml(column, index, 1, 1)).join("")}</row>`
+    `<row r="1">${columns.map((column, index) => cellXml(columnHeader(column), index, 1, 1)).join("")}</row>`
   );
   let buffer = "";
   for (let rowOffset = 0; rowOffset < rows.length; rowOffset += 1) {
@@ -394,7 +447,7 @@ function* worksheetChunks(rows, columns, widths, rowStyle) {
     const rowIndex = rowOffset + 2;
     const style = rowStyle ? rowStyle(row) : 0;
     buffer += `<row r="${rowIndex}">${columns.map((column, columnIndex) =>
-      cellXml(row[column] ?? "", columnIndex, rowIndex, style)
+      cellXml(row[columnKey(column)] ?? "", columnIndex, rowIndex, style)
     ).join("")}</row>`;
     if (buffer.length >= 512 * 1024) {
       yield buffer;
@@ -426,12 +479,14 @@ function buildOutput(listInfo, chatInfo, matchInfo, useSingle, weekLabel, source
     { 项目: "课次周次分布", 值: listInfo.weekDistribution || "无有效日期" },
     { 项目: "名单工作表", 值: listInfo.sheetName },
     { 项目: "聊天工作表", 值: chatInfo.sheetName },
-    { 项目: "名单去重规则", 值: "按教师邮箱+学员姓名合并，保留最早课次" },
+    { 项目: "名单去重规则", 值: "先清洗学员姓名，再按教师邮箱+匹配学员姓名合并，保留最早课次" },
+    { 项目: "学员姓名清洗", 值: "循环去除空格及末尾数字、重复、学员/同学/学生、家长/妈妈/爸爸及兄弟姐妹称谓、初一至初三/高一至高三、括号备注等标记" },
     { 项目: "邮箱规则", 值: "优先群聊发送人邮箱，为空时回退邮箱" },
     { 项目: "聊天清洗规则", 值: "删除私聊、无有效邮箱、发送方非员工、引用回复" },
     { 项目: "强匹配规则", 值: "教师邮箱一致，且群名或聊天内容包含学员名后两字" },
-    { 项目: "弱匹配规则", 值: useSingle ? "已启用：强匹配失败后使用学员名末字" : "未启用" },
-    { 项目: "发送判定", 值: "强匹配或弱匹配任一命中即为已发送" },
+    { 项目: "弱匹配规则", 值: useSingle ? "已启用：姓名至少两字且强匹配失败后，使用学员名末字" : "未启用" },
+    { 项目: "人工复核规则", 值: "清洗后学员姓名不足两个字时，不进行自动匹配，发送情况标记为人工复核" },
+    { 项目: "发送判定", 值: "姓名至少两字时，强匹配或已启用的弱匹配任一命中即为已发送" },
   ];
   Object.entries(listInfo.counts).forEach(([key, value]) => explanation.push({ 项目: `名单_${key}`, 值: value }));
   Object.entries(chatInfo.counts).forEach(([key, value]) => explanation.push({ 项目: `聊天_${key}`, 值: value }));
@@ -439,11 +494,11 @@ function buildOutput(listInfo, chatInfo, matchInfo, useSingle, weekLabel, source
 
   const sheets = [
     {
-      name: "打卡终版",
+      name: "打卡结果",
       rows: matchInfo.finalRows,
       columns: FINAL_COLUMNS,
       widths: { 教师邮箱: 28, 命中群名: 36, 项目组: 28, 校区: 24 },
-      rowStyle: (row) => row.匹配结论 === "弱匹配" ? 4 : row.发送情况 === "已发送" ? 2 : 3,
+      rowStyle: (row) => row.发送情况 === "人工复核" || row.匹配结论 === "弱匹配" ? 4 : row.发送情况 === "已发送" ? 2 : 3,
     },
     {
       name: "匹配明细",
@@ -569,7 +624,7 @@ self.onmessage = async ({ data }) => {
       80,
     );
 
-    progress("正在生成 Excel", "写入打卡终版、匹配明细、清洗后聊天和处理说明。", 84);
+    progress("正在生成 Excel", "写入打卡结果、匹配明细、清洗后聊天和处理说明。", 84);
     const output = buildOutput(
       listInfo,
       chatInfo,
@@ -587,6 +642,7 @@ self.onmessage = async ({ data }) => {
         targets: listInfo.targets.length,
         sent: matchInfo.counts.已发送,
         unsent: matchInfo.counts.未发送,
+        review: matchInfo.counts.人工复核,
         cleanChats: chatInfo.chats.length,
       },
     }, [output.buffer]);

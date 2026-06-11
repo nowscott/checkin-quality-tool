@@ -102,7 +102,7 @@ form.addEventListener("submit", (event) => {
       downloadResult(data.buffer, data.filename);
       setStatus(
         "处理完成，结果已下载",
-        `质检 ${data.summary.targets.toLocaleString()} 人：已发送 ${data.summary.sent.toLocaleString()}，未发送 ${data.summary.unsent.toLocaleString()}；清洗后聊天 ${data.summary.cleanChats.toLocaleString()} 条。`,
+        `质检 ${data.summary.targets.toLocaleString()} 人：已发送 ${data.summary.sent.toLocaleString()}，未发送 ${data.summary.unsent.toLocaleString()}，人工复核 ${data.summary.review.toLocaleString()}；清洗后聊天 ${data.summary.cleanChats.toLocaleString()} 条。`,
         100,
         "done",
       );

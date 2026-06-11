@@ -71,7 +71,7 @@
           <label class="switch-row">
             <span>
               <strong>启用末字弱匹配</strong>
-              <small>后两字未命中时，再用学员名最后一个字匹配</small>
+              <small>姓名至少两字时，后两字未命中再用末字匹配</small>
             </span>
             <input id="use-single" type="checkbox">
           </label>
@@ -79,12 +79,12 @@
 
         <div class="rules">
           <span>自动清洗</span>
-          <b>私聊</b><b>无邮箱</b><b>非员工发送</b><b>引用回复</b>
+          <b>私聊</b><b>无邮箱</b><b>非员工发送</b><b>引用回复</b><b>姓名异常后缀</b>
         </div>
 
         <button id="submit-button" type="submit">
           <span>生成质检结果</span>
-          <small>输出打卡终版、匹配明细、清洗后聊天、处理说明</small>
+          <small>输出打卡结果、匹配明细、清洗后聊天、处理说明</small>
         </button>
       </form>
     </section>
@@ -99,7 +99,7 @@
     </section>
 
     <section class="output-grid">
-      <article><span>Sheet 1</span><strong>打卡终版</strong><p>每位教师、每位学员保留一个课次，并给出最终发送判定。</p></article>
+      <article><span>Sheet 1</span><strong>打卡结果</strong><p>前八列兼容现有打卡表，姓名不足两字时标记人工复核。</p></article>
       <article><span>Sheet 2</span><strong>匹配明细</strong><p>记录命中关键词、位置、群名、聊天时间、内容和源行号。</p></article>
       <article><span>Sheet 3</span><strong>清洗后聊天</strong><p>仅保留后续匹配所需字段，移除无关列和无效记录。</p></article>
       <article><span>Sheet 4</span><strong>处理说明</strong><p>记录清洗规则、去重规则、各阶段数量和生成时间。</p></article>
