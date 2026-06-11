@@ -2,6 +2,8 @@
 
 纯前端打卡质检网页工具。Excel 文件只在浏览器本地处理，不会上传服务器。
 
+[在线使用](https://checkin-quality-tool.vercel.app)
+
 读取使用 SheetJS 0.20.3 的 dense 模式，并在 Web Worker 中运行；导出使用 fflate 流式生成标准 XLSX，避免大文件阻塞页面或一次性拼接超大 XML。
 
 ## 功能
