@@ -1,5 +1,10 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v2.4.1",
+    date: "2026-06-13",
+    items: ["进一步收紧桌面端底部留白，确保 1366×768 视口也可完整显示主页面。"],
+  },
+  {
     version: "v2.4.0",
     date: "2026-06-13",
     items: [
