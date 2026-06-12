@@ -15,7 +15,13 @@ function systemTheme(): Theme {
 }
 
 export function initialTheme(): Theme {
-  return storedTheme() || systemTheme();
+  const deviceTheme = systemTheme();
+  const savedTheme = storedTheme();
+  if (savedTheme === deviceTheme) {
+    window.localStorage.removeItem(STORAGE_KEY);
+    return deviceTheme;
+  }
+  return savedTheme || deviceTheme;
 }
 
 export function applyTheme(theme: Theme) {
@@ -32,19 +38,28 @@ export function useTheme() {
   }, [theme]);
 
   useEffect(() => {
-    if (!usesSystemTheme) return;
     const mediaQuery = window.matchMedia(DARK_MODE_QUERY);
     const handleChange = (event: MediaQueryListEvent) => {
-      setTheme(event.matches ? "dark" : "light");
+      const deviceTheme = event.matches ? "dark" : "light";
+      if (usesSystemTheme || theme === deviceTheme) {
+        window.localStorage.removeItem(STORAGE_KEY);
+        setUsesSystemTheme(true);
+        setTheme(deviceTheme);
+      }
     };
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [usesSystemTheme]);
+  }, [theme, usesSystemTheme]);
 
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
-    window.localStorage.setItem(STORAGE_KEY, nextTheme);
-    setUsesSystemTheme(false);
+    const followsDevice = nextTheme === systemTheme();
+    if (followsDevice) {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(STORAGE_KEY, nextTheme);
+    }
+    setUsesSystemTheme(followsDevice);
     setTheme(nextTheme);
   }
 
