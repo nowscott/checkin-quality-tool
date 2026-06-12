@@ -1,5 +1,10 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v2.4.3",
+    date: "2026-06-13",
+    items: ["修复桌面窄屏下副标题换行后与右下角版本入口重叠的问题。"],
+  },
+  {
     version: "v2.4.2",
     date: "2026-06-13",
     items: [

@@ -453,6 +453,11 @@ button small { opacity: .78; }
   .output-grid p { margin-top: 9px; font-size: 13px; line-height: 1.55; }
 }
 
+@media (min-width: 761px) and (max-width: 1100px) {
+  header { padding-right: 104px; }
+  .subtitle { max-width: none; }
+}
+
 @media (max-width: 760px) {
   .shell { width: min(100% - 24px, 1120px); padding: 36px 0 56px; }
   .brand-line { gap: 10px; margin-bottom: 12px; }
