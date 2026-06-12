@@ -1,10 +1,18 @@
-const WHITELIST_COLUMNS = [
-  "学员号", "学员姓名", "匹配学员姓名", "处理方式", "匹配别名", "说明",
-];
+import type { TargetRow, Whitelist, WhitelistEntry } from "./types";
+import { cleanStudentName, normalizeMatchText, text } from "./utils";
 
-function parseCsv(value) {
-  const rows = [];
-  let row = [];
+export const WHITELIST_COLUMNS = [
+  "学员号",
+  "学员姓名",
+  "匹配学员姓名",
+  "处理方式",
+  "匹配别名",
+  "说明",
+] as const;
+
+function parseCsv(value: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
   let field = "";
   let quoted = false;
   const source = String(value || "").replace(/^\uFEFF/, "");
@@ -40,14 +48,20 @@ function parseCsv(value) {
   return rows;
 }
 
-function buildWhitelist(csvText) {
+export function buildWhitelist(csvText: string): Whitelist {
   const rows = parseCsv(csvText).filter((row) => row.some((value) => text(value)));
-  if (!rows.length) return { entries: [], byStudentId: new Map(), byStudentName: new Map() };
+  const empty = {
+    entries: [],
+    byStudentId: new Map<string, WhitelistEntry>(),
+    byStudentName: new Map<string, WhitelistEntry>(),
+  };
+  if (!rows.length) return empty;
+
   const headers = rows[0].map(text);
-  const index = (name) => headers.indexOf(name);
-  const entries = [];
-  const byStudentId = new Map();
-  const byStudentName = new Map();
+  const index = (name: string) => headers.indexOf(name);
+  const entries: WhitelistEntry[] = [];
+  const byStudentId = new Map<string, WhitelistEntry>();
+  const byStudentName = new Map<string, WhitelistEntry>();
   for (const row of rows.slice(1)) {
     const studentName = cleanStudentName(row[index("学员姓名")]);
     const studentId = text(row[index("学员号")]);
@@ -56,7 +70,7 @@ function buildWhitelist(csvText) {
       .split(/[|；;]/u)
       .map((value) => cleanStudentName(value).cleaned)
       .filter(Boolean);
-    const entry = {
+    const entry: WhitelistEntry = {
       学员号: studentId,
       学员姓名: studentName.original,
       匹配学员姓名: studentName.cleaned,
@@ -73,7 +87,7 @@ function buildWhitelist(csvText) {
   return { entries, byStudentId, byStudentName };
 }
 
-function findWhitelistEntry(target, whitelist) {
+export function findWhitelistEntry(target: TargetRow, whitelist: Whitelist) {
   const studentKey = normalizeMatchText(target.学员姓名 || target.原始学员姓名);
   return (
     (target.学员号 && whitelist.byStudentId.get(normalizeMatchText(target.学员号))) ||

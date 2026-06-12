@@ -1,5 +1,14 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v2.1.0",
+    date: "2026-06-12",
+    items: [
+      "Web Worker 改为 TypeScript，并拆分为读取、名单、聊天、白名单、匹配和 Excel 导出模块。",
+      "继续使用原有 SheetJS 0.20.3 浏览器构建，保持大文件解析和输出结果不变。",
+      "Excel 压缩模块改由 Vite 打包，减少公共脚本和全局依赖。",
+    ],
+  },
+  {
     version: "v2.0.0",
     date: "2026-06-12",
     items: [

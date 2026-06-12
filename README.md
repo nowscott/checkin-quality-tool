@@ -59,9 +59,8 @@ npm run dev
 ## 代码结构
 
 - `src/`：React 页面组件、状态管理、规则文案和 TypeScript 类型
-- `public/worker.js`：文件读取、名单/聊天预处理和整体流程
-- `public/modules/whitelist.js`：CSV白名单解析与学员关联
-- `public/modules/matching.js`：教师邮箱、学员姓名和别名匹配
+- `src/worker/`：TypeScript Web Worker，按读取、清洗、白名单、匹配和 Excel 导出拆分
+- `public/vendor/xlsx.full.min.js`：SheetJS 0.20.3 浏览器构建，由 Worker 本地加载
 
 浏览器建议使用最新版 Chrome 或 Edge，并关闭不必要的标签页，以便为 50MB 以上 Excel 留出足够内存。
 

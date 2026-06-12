@@ -30,7 +30,7 @@ export function Header({ onOpenGuide, onOpenChangelog }: HeaderProps) {
         type="button"
         onClick={onOpenChangelog}
       >
-        v2.0.0
+        v2.1.0
       </button>
     </header>
   );

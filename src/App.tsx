@@ -73,7 +73,7 @@ export default function App() {
     if (!listFile || !chatFile) return;
 
     workerRef.current?.terminate();
-    const worker = new Worker("/worker.js");
+    const worker = new Worker(new URL("./worker/index.ts", import.meta.url));
     workerRef.current = worker;
     setProcessing(true);
     updateStatus("正在启动本地处理引擎", "所有文件只在当前浏览器中处理，不会上传。", 2);
